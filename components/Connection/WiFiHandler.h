@@ -3,20 +3,20 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "freertos/event_groups.h"
+#include "esp_system.h"
 #include "esp_wifi.h"
-#include "esp_wpa2.h"
+
+#include "esp_netif.h"
 #include "esp_event.h"
 #include "esp_log.h"
-
-static const char TAG[] = "smartconfig_example";
+#include "nvs_flash.h"
 
 bool HasCredentialsSaved();
 
-static private bool hasCredentials = false;
-static private bool hasConnection = false;
+static bool hasCredentials = false;
 bool HasConnection();
 
-void WiFiInit();
+void InitWiFi();
 
 /**
  * @brief Switches the Wifi to Start/Stop.
