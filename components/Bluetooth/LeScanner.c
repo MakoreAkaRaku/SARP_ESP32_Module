@@ -1,5 +1,7 @@
 #include "LeScanner.h"
 
+static const char TAG[] = "LeScanner";
+
 static esp_ble_scan_params_t scanParams = {
     .scan_type              = BLE_SCAN_TYPE_ACTIVE,
     .own_addr_type          = BLE_ADDR_TYPE_PUBLIC,

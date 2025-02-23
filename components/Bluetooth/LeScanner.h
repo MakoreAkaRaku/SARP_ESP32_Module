@@ -2,7 +2,7 @@
 #include "esp_bt.h"
 #include "esp_gap_ble_api.h"
 
-static const char TAG[] = "LeScanner";
+
 void InitScan();
 
 void StartScan();
