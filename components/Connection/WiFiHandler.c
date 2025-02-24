@@ -1,12 +1,14 @@
 #include "WiFiHandler.h"
+#include "LedHandler.h"
+
 #define MAX_RETRIES 8
 static const char TAG[] = "WiFiHandler";
 static int conn_retries = 0;
 static const int CONNECTED_BIT = BIT0;
 static struct WiFiCredential
 {
-    char SSID[32];
-    char PWD[64];
+    char SSID[32];  // "TP-Link_21C4" dummy data
+    char PWD[64];   // "48997874" dummy data
 } credential;
 
 /* FreeRTOS event group to signal when we are connected & ready to make a request */
@@ -51,7 +53,7 @@ bool SwitchWiFi()
             },
         };
         strncpy((char *)conf.sta.ssid, credential.SSID, sizeof(credential.PWD));
-        strncpy((char *)conf.sta.password, credential.PWD, sizeof(credential.PWD));
+        strncpy((char *)conf.sta.password, "8741455"/*credential.PWD*/, sizeof(credential.PWD));
         esp_wifi_set_config(WIFI_IF_STA, &conf);
         ESP_ERROR_CHECK(esp_wifi_start());
     }
@@ -83,6 +85,7 @@ static void WiFiEventHandler(
     if (event_base == WIFI_EVENT && event_id == WIFI_EVENT_STA_START)
     {
         ESP_LOGI(TAG, "event handler has started, trying to connect...");
+        LEDEvent(WIFI_CONNECTING);
         esp_wifi_connect();
     }
     else if (event_base == WIFI_EVENT && event_id == WIFI_EVENT_STA_DISCONNECTED)
@@ -90,12 +93,14 @@ static void WiFiEventHandler(
         xEventGroupClearBits(s_wifi_event_group, CONNECTED_BIT);
         if(conn_retries < MAX_RETRIES) {
             ESP_LOGI(TAG, "Disconnected, retrying... [%d]",conn_retries++);       
+            LEDEvent(WIFI_CONNECTING);
             esp_wifi_connect();
         }
         else {
             ESP_LOGI(TAG,"Max retries reached, starting to listen to BLE");
             conn_retries = 0;
-            
+            LEDEvent(SWAP_TO_BLE_SCAN);
+            esp_wifi_stop();
         }
     }
     else if (event_base == IP_EVENT && event_id == IP_EVENT_STA_GOT_IP)
@@ -103,9 +108,13 @@ static void WiFiEventHandler(
         ip_event_got_ip_t *event = (ip_event_got_ip_t *)event_data;
         ESP_LOGI(TAG,"Got ip: "IPSTR,IP2STR(&event->ip_info.ip));
         xEventGroupSetBits(s_wifi_event_group, CONNECTED_BIT);
+        LEDEvent(WIFI_CONNECTED);
     }
     else if (event_base== WIFI_EVENT && event_id == WIFI_EVENT_STA_CONNECTED)
     {
-        ESP_LOGI(TAG, "Connected! Waiting for ip...");
+        ESP_LOGI(TAG, "Connected, Waiting for DHCP protocol...");
+    }
+    else if (event_base == WIFI_EVENT && event_id == WIFI_EVENT_STA_DISCONNECTED) {
+        ESP_LOGI(TAG, "Disconnected, something happened.");
     }
 }

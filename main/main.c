@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include "LedHandler.h"
 #include "WiFiHandler.h"
 #include "LeScanner.h"
 #include "nvs_flash.h"
@@ -14,7 +15,7 @@ void app_main(void)
         ESP_ERROR_CHECK(nvs_flash_erase());
         ret = nvs_flash_init();
     }
-    
+    InitLEDS();
     InitWiFi();
     SwitchWiFi();
     
