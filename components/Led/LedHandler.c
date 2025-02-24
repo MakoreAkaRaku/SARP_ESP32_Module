@@ -22,8 +22,8 @@ void LEDEvent(enum LED_MODE state ) {
     case WIFI_CONNECTED:
         times = 1;
         blinks = 2;
-        blinkInterval = 500;
-        timesInterval = 1000;
+        blinkInterval = 100;
+        timesInterval = 0;
         break;
     case BLE_CONFIG_RECEIVED:
         times = 3;
@@ -34,9 +34,14 @@ void LEDEvent(enum LED_MODE state ) {
         case WIFI_CONNECTING:
         times = 1;
         blinks = 3;
-        blinkInterval = 40;
+        blinkInterval = 5;
         timesInterval =0;
         break;
+        case SWAP_TO_BLE_SCAN:
+        times = 1;
+        blinks = 2;
+        blinkInterval = 80;
+        timesInterval = 0;
     default:
         break;
     }
@@ -48,6 +53,7 @@ void LEDEvent(enum LED_MODE state ) {
             gpio_set_level(GPIO_NUM_2,1);
             vTaskDelay(blinkInterval);
             gpio_set_level(GPIO_NUM_2,0);
+            vTaskDelay(blinkInterval);
         }
         vTaskDelay(timesInterval);
     }
