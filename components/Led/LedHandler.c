@@ -25,7 +25,7 @@ void LEDEvent(enum LED_MODE state ) {
         blinkInterval = 100;
         timesInterval = 0;
         break;
-    case BLE_CONFIG_RECEIVED:
+    case BLE_CONFIG_SETTED:
         times = 3;
         blinks = 3;
         blinkInterval = 400;
@@ -37,7 +37,7 @@ void LEDEvent(enum LED_MODE state ) {
         blinkInterval = 5;
         timesInterval =0;
         break;
-        case SWAP_TO_BLE_SCAN:
+        case SWITCH_TO_BLE_SCAN:
         times = 1;
         blinks = 2;
         blinkInterval = 80;

@@ -3,10 +3,11 @@
 #include "freertos/task.h"
 
 enum LED_MODE {
-    SWAP_TO_BLE_SCAN,
+    SWITCH_TO_BLE_SCAN,
     WIFI_CONNECTING,
     WIFI_CONNECTED,
-    BLE_CONFIG_RECEIVED,
+    BLE_CONFIG_SETTED,
+    MEM_ALLOC_FAILURE,
     ERROR,
     OK,
 };
