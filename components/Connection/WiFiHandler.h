@@ -11,8 +11,8 @@
 #include "esp_log.h"
 #include "nvs_flash.h"
 
-#define SSID_SIZE 8 //in Bytes
-#define PWD_SIZE 8 // in Bytes
+#define SSID_SIZE 8 // in Bytes
+#define PWD_SIZE 8  // in Bytes
 bool HasCredentialsSaved();
 
 bool BlockUntilHasConnection();
@@ -21,15 +21,15 @@ void InitWiFi();
 
 /**
  * @brief Switches the Wifi to Start/Stop.
- * 
+ *
  * @return true if WiFi has been turned on.
  * @return false if not.
  */
 bool SwitchWiFi();
 
-void SetCredentials(const uint8_t *ssid,const uint8_t *pwd);
+void SetCredentials(const uint8_t *ssid, const uint8_t *pwd);
 
 static void SwitchToLEScanCallback();
 
-static void WiFiEventHandler(void* arg, esp_event_base_t event_base, 
-    int32_t event_id, void* event_data);
+static void WiFiEventHandler(void *arg, esp_event_base_t event_base,
+                             int32_t event_id, void *event_data);

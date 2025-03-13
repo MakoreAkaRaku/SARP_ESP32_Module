@@ -2,7 +2,8 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 
-enum LED_MODE {
+enum LED_MODE
+{
     SWITCH_TO_BLE_SCAN,
     WIFI_CONNECTING,
     WIFI_CONNECTED,

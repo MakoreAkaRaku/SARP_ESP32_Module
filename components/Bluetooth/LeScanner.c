@@ -74,7 +74,8 @@ static bool UUIDCorresponds(const struct ble_scan_result_evt_param *scanResult)
     return uuid == SHORT_UUID_TARGET;
 }
 
-static void SwitchToWiFiCallback() {
+static void SwitchToWiFiCallback()
+{
     ESP_LOGI(TAG, "Switching back to reconnection mode");
     DisableBLE();
     SwitchWiFi();
@@ -124,7 +125,7 @@ static void ScanResultCallback(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_para
             if (++scan_retry > MAX_RETRY)
             {
                 scan_retry = 0;
-                xTaskCreate(SwitchToWiFiCallback,"switch_to_WiFi",2096,NULL,5,NULL);
+                xTaskCreate(SwitchToWiFiCallback, "switch_to_WiFi", 2096, NULL, 5, NULL);
             }
             else
             {
@@ -138,7 +139,10 @@ static void ScanResultCallback(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_para
     }
 }
 
-static void FetchCredentials(const struct ble_scan_result_evt_param *scanResult, uint8_t *ssid, uint8_t *pwd)
+static void FetchCredentials(
+    const struct ble_scan_result_evt_param *scanResult,
+    uint8_t *ssid,
+    uint8_t *pwd)
 {
     strncpy((char *)ssid, (char *)(scanResult->ble_adv + DATA_START_OFFSET), SSID_SIZE);
     strncpy((char *)pwd, (char *)(scanResult->ble_adv + DATA_START_OFFSET + SSID_SIZE), PWD_SIZE);
