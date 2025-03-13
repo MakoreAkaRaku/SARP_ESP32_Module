@@ -124,7 +124,7 @@ static void ScanResultCallback(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_para
             if (++scan_retry > MAX_RETRY)
             {
                 scan_retry = 0;
-                xTaskCreate(SwitchToWiFiCallback,"disable_cb",2096,NULL,5,NULL);
+                xTaskCreate(SwitchToWiFiCallback,"switch_to_WiFi",2096,NULL,5,NULL);
             }
             else
             {
