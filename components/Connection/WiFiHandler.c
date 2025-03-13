@@ -1,21 +1,18 @@
 #include "WiFiHandler.h"
+#include "LeScanner.h"
 #include "LedHandler.h"
 
-#define MAX_RETRIES 8
+#define MAX_RETRIES 3
 static const char TAG[] = "WiFiHandler";
-static int conn_retries = 0;
-static const int CONNECTED_BIT = BIT0;
-static struct WiFiCredential
-{
-    char SSID[32];  // "TP-Link_21C4" dummy data
-    char PWD[64];   // "48997874" dummy data
-} credential;
+static int con_retry = 0;
+static const int WIFI_CONNECT_BIT = BIT0;
 
 /* FreeRTOS event group to signal when we are connected & ready to make a request */
 static EventGroupHandle_t s_wifi_event_group;
 
 void InitWiFi()
 {
+    ESP_LOGI(TAG, "InitWifi");
     esp_netif_init();
     s_wifi_event_group = xEventGroupCreate();
     ESP_ERROR_CHECK(esp_event_loop_create_default());
@@ -31,10 +28,15 @@ void InitWiFi()
     wifi_config_t wifi_conf;
     if (ESP_OK == esp_wifi_get_config(ESP_IF_WIFI_STA, &wifi_conf))
     {
-        ESP_LOGI(TAG, "Credentials found for SSID:[%s] and PWD:[%s]", wifi_conf.sta.ssid, wifi_conf.sta.password);
-        strncpy(credential.SSID, (char *)wifi_conf.sta.ssid, sizeof(wifi_conf.sta.ssid));
-        strncpy(credential.PWD, (char *)wifi_conf.sta.password, sizeof(wifi_conf.sta.password));
-        hasCredentials = true;
+        // In case of first time, we set a dummyfied defaulted values.
+        if (strlen((const char *)wifi_conf.sta.ssid) == 0)
+        {
+            SetCredentials((uint8_t *)"NAN", (uint8_t *)"NAN");
+        }
+        else
+        {
+            ESP_LOGI(TAG, "Credentials found for SSID:[%s] and PWD:[%s]", wifi_conf.sta.ssid, wifi_conf.sta.password);
+        }
     }
 }
 
@@ -42,37 +44,42 @@ bool SwitchWiFi()
 {
     static bool isOn = false;
     if (!isOn)
-    {
-        wifi_config_t conf = {
-            .sta = {
-                .threshold.authmode = WIFI_AUTH_WPA2_PSK, // Use WPA2-PSK
-                .pmf_cfg = {
-                    .capable = true,
-                    .required = false
-                }
-            },
-        };
-        strncpy((char *)conf.sta.ssid, credential.SSID, sizeof(credential.PWD));
-        strncpy((char *)conf.sta.password, "8741455"/*credential.PWD*/, sizeof(credential.PWD));
-        esp_wifi_set_config(WIFI_IF_STA, &conf);
         ESP_ERROR_CHECK(esp_wifi_start());
-    }
     else
-    {
         ESP_ERROR_CHECK(esp_wifi_stop());
-    }
-
+    ESP_LOGI(TAG, "WiFi switch: %d", !isOn);
     return isOn = !isOn;
 }
 
-bool HasCredentialsSaved()
+void SetCredentials(const uint8_t *ssid, const uint8_t *pwd)
 {
-    return strlen(credential.PWD) != 0;
+    wifi_config_t wifi_conf;
+
+    wifi_config_t conf = {
+        .sta = {
+            .threshold.authmode = WIFI_AUTH_WPA2_PSK, // Use WPA2-PSK
+            .pmf_cfg = {
+                .capable = true,
+                .required = false}},
+    };
+    strncpy((char *)conf.sta.ssid, (const char *)ssid, SSID_SIZE);
+    strncpy((char *)conf.sta.password, (const char *)pwd, PWD_SIZE);
+    esp_wifi_set_config(WIFI_IF_STA, &conf);
 }
 
-bool HasConnection()
+bool BlockUntilHasConnection()
 {
-    return CONNECTED_BIT == 1;
+    ESP_LOGI(TAG, "blocking thread");
+    EventBits_t a = xEventGroupWaitBits(s_wifi_event_group, WIFI_CONNECT_BIT, pdTRUE, pdFALSE, portMAX_DELAY);
+    ESP_LOGI(TAG, "unblocking thread");
+    return a == WIFI_CONNECT_BIT;
+}
+
+static void SwitchToLEScanCallback()
+{
+    SwitchWiFi();
+    EnableBLE();
+    StartScan();
 }
 
 static void WiFiEventHandler(
@@ -90,31 +97,35 @@ static void WiFiEventHandler(
     }
     else if (event_base == WIFI_EVENT && event_id == WIFI_EVENT_STA_DISCONNECTED)
     {
-        xEventGroupClearBits(s_wifi_event_group, CONNECTED_BIT);
-        if(conn_retries < MAX_RETRIES) {
-            ESP_LOGI(TAG, "Disconnected, retrying... [%d]",conn_retries++);       
+        xEventGroupClearBits(s_wifi_event_group, WIFI_CONNECT_BIT);
+        if (++con_retry > MAX_RETRIES)
+        {
+            ESP_LOGI(TAG, "Max retries reached, starting to listen to BLE");
+            con_retry = 0;
+            LEDEvent(SWITCH_TO_BLE_SCAN);
+            xTaskCreate(SwitchToLEScanCallback, "switch_to_LEScan", 2096, NULL, 5, NULL);
+        }
+        else
+        {
+            ESP_LOGI(TAG, "Disconnected, retrying... [%d]", con_retry);
             LEDEvent(WIFI_CONNECTING);
             esp_wifi_connect();
-        }
-        else {
-            ESP_LOGI(TAG,"Max retries reached, starting to listen to BLE");
-            conn_retries = 0;
-            LEDEvent(SWAP_TO_BLE_SCAN);
-            esp_wifi_stop();
         }
     }
     else if (event_base == IP_EVENT && event_id == IP_EVENT_STA_GOT_IP)
     {
+        con_retry = 0;
         ip_event_got_ip_t *event = (ip_event_got_ip_t *)event_data;
-        ESP_LOGI(TAG,"Got ip: "IPSTR,IP2STR(&event->ip_info.ip));
-        xEventGroupSetBits(s_wifi_event_group, CONNECTED_BIT);
+        ESP_LOGI(TAG, "Got ip: " IPSTR, IP2STR(&event->ip_info.ip));
+        xEventGroupSetBits(s_wifi_event_group, WIFI_CONNECT_BIT);
         LEDEvent(WIFI_CONNECTED);
     }
-    else if (event_base== WIFI_EVENT && event_id == WIFI_EVENT_STA_CONNECTED)
+    else if (event_base == WIFI_EVENT && event_id == WIFI_EVENT_STA_CONNECTED)
     {
         ESP_LOGI(TAG, "Connected, Waiting for DHCP protocol...");
     }
-    else if (event_base == WIFI_EVENT && event_id == WIFI_EVENT_STA_DISCONNECTED) {
+    else if (event_base == WIFI_EVENT && event_id == WIFI_EVENT_STA_DISCONNECTED)
+    {
         ESP_LOGI(TAG, "Disconnected, something happened.");
     }
 }

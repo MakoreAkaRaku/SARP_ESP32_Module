@@ -11,10 +11,11 @@
 #include "esp_log.h"
 #include "nvs_flash.h"
 
+#define SSID_SIZE 8 //in Bytes
+#define PWD_SIZE 8 // in Bytes
 bool HasCredentialsSaved();
 
-static bool hasCredentials = false;
-bool HasConnection();
+bool BlockUntilHasConnection();
 
 void InitWiFi();
 
@@ -25,6 +26,10 @@ void InitWiFi();
  * @return false if not.
  */
 bool SwitchWiFi();
+
+void SetCredentials(const uint8_t *ssid,const uint8_t *pwd);
+
+static void SwitchToLEScanCallback();
 
 static void WiFiEventHandler(void* arg, esp_event_base_t event_base, 
     int32_t event_id, void* event_data);
