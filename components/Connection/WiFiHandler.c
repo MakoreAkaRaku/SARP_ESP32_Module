@@ -77,9 +77,12 @@ bool BlockUntilHasConnection()
 
 static void SwitchToLEScanCallback()
 {
+    ESP_LOGI(TAG, "Switch to BLE Scan");
+    LEDEvent(SWITCH_MODE);
     SwitchWiFi();
     EnableBLE();
     StartScan();
+    vTaskDelete(NULL);
 }
 
 static void WiFiEventHandler(
@@ -91,7 +94,7 @@ static void WiFiEventHandler(
     ESP_LOGI(TAG, "event number %" PRId32, event_id);
     if (event_base == WIFI_EVENT && event_id == WIFI_EVENT_STA_START)
     {
-        ESP_LOGI(TAG, "event handler has started, trying to connect...");
+        ESP_LOGI(TAG, "Trying to connect...");
         LEDEvent(WIFI_CONNECTING);
         esp_wifi_connect();
     }
@@ -100,9 +103,7 @@ static void WiFiEventHandler(
         xEventGroupClearBits(s_wifi_event_group, WIFI_CONNECT_BIT);
         if (++con_retry > MAX_RETRIES)
         {
-            ESP_LOGI(TAG, "Max retries reached, starting to listen to BLE");
             con_retry = 0;
-            LEDEvent(SWITCH_TO_BLE_SCAN);
             xTaskCreate(SwitchToLEScanCallback, "switch_to_LEScan", 2096, NULL, 5, NULL);
         }
         else

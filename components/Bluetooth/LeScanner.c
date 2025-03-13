@@ -76,7 +76,8 @@ static bool UUIDCorresponds(const struct ble_scan_result_evt_param *scanResult)
 
 static void SwitchToWiFiCallback()
 {
-    ESP_LOGI(TAG, "Switching back to reconnection mode");
+    ESP_LOGI(TAG, "Switching back to WiFi mode");
+    LEDEvent(SWITCH_MODE);
     DisableBLE();
     SwitchWiFi();
     vTaskDelete(NULL);
