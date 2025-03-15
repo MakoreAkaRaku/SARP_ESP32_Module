@@ -26,18 +26,18 @@ void LEDEvent(enum LED_MODE state)
     case WIFI_CONNECTING:
         times = 1;
         blinks = 3;
-        blinkInterval2 = blinkInterval2 = pdMS_TO_TICKS(25);
+        blinkInterval1 = blinkInterval2 = pdMS_TO_TICKS(25);
         break;
     case BLE_SCANNING:
         times = 2;
         blinks = 2;
-        blinkInterval2 = blinkInterval2 = pdMS_TO_TICKS(10);
+        blinkInterval1 = blinkInterval2 = pdMS_TO_TICKS(10);
         timesInterval = pdMS_TO_TICKS(50);
         break;
     case SWITCH_MODE:
         times = 1;
         blinks = 2;
-        blinkInterval2 = blinkInterval1 = pdMS_TO_TICKS(80);
+        blinkInterval1 = blinkInterval2 = pdMS_TO_TICKS(80);
         break;
     case BLE_CONFIG_SETTED:
         times = 1;
