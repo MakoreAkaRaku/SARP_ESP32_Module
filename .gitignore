@@ -2,3 +2,5 @@
 build/
 sdkconfig.old
 dependencies.lock
+# Ignore pem files
+*.pem
