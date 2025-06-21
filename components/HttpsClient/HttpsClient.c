@@ -108,12 +108,12 @@ esp_err_t perform_http_request(esp_http_client_method_t method,
   // Check results and log any status/errors
   if (err == ESP_OK)
   {
-    const int content_length = esp_http_client_get_content_length(client);
+    const long long int content_length = esp_http_client_get_content_length(client);
     ESP_LOGI(TAG, "HTTP %s Status = %d, content_length = %lld",
              (method == HTTP_METHOD_GET) ? "GET" : ((method == HTTP_METHOD_POST) ? "POST" : "OTHER"),
              esp_http_client_get_status_code(client),
              content_length);
-    int total_read = 0;
+    long long int total_read = 0;
     if (content_length > 0)
     { // Only read if there's content to read
       int read_len = 0;
@@ -127,12 +127,12 @@ esp_err_t perform_http_request(esp_http_client_method_t method,
         }
         else if (read_len < 0)
         { // Error
-          ESP_LOGE(TAG, "esp_http_client_read failed: %s", esp_err_to_name(read_len));
+          ESP_LOGE(TAG, "esp_http_client_read failed:");
           err = ESP_FAIL; // Indicate an error occurred during read
           break;
         }
         total_read += read_len;
-        ESP_LOGD(TAG, "Read %d bytes, total %d", read_len, total_read);
+        ESP_LOGD(TAG, "Read %d bytes, total %lld", read_len, total_read);
       }
     }
     response_buffer[total_read] = '\0'; // Null-terminate the response buffer
