@@ -17,6 +17,13 @@ bool HasCredentialsSaved();
 
 bool BlockUntilHasConnection();
 
+/**
+ * @brief The InitWiFi function initializes the Wi-Fi subsystem for an ESP32 device,
+ * setting up the necessary network interfaces, event handlers, and default configurations.
+ * It also checks for existing Wi-Fi credentials, logging them if found, or setting default
+ * placeholder values if none are available.
+ * 
+ */
 void InitWiFi();
 
 /**

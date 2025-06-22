@@ -16,4 +16,12 @@ enum LED_MODE
 
 void InitLEDS();
 
+/**
+ * @brief The LEDEvent function controls the blinking behavior
+ * of an LED based on the specified LED_MODE state. It uses predefined
+ * timing and repetition patterns for different states, such as error,
+ * Wi-Fi connection status, BLE scanning, and mode switching, by setting
+ * GPIO pin levels and introducing delays.
+ * 
+ */
 void LEDEvent();
