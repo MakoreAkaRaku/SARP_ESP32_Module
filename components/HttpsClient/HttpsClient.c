@@ -2,14 +2,18 @@
 #include "esp_log.h"
 #include "esp_crt_bundle.h"
 #include "cJson.h"
-#define MODULE_REGISTRY_SERVER_RESPONSE_SIZE 128 // Size of the response buffer for module registration
+#define MODULE_REGISTRY_SERVER_RESPONSE_SIZE 128     // Size of the response buffer for module registration
 #define PERIPHERAL_REGISTRY_SERVER_RESPONSE_SIZE 128 // Size of the response buffer for peripheral registration
 static const char TAG[] = "HTTPSClient";
-/* Root cert for the web, taken from firefox navigator by asking for the certificate
-   To embed it in the app binary, the PEM file is named
-   in the component.mk COMPONENT_EMBED_TXTFILES variable.
-*/
 
+/**
+ * @brief Handles HTTP events for the ESP HTTP client.
+ * This function processes various events such as connection, data reception,
+ * and disconnection, logging relevant information.
+ *
+ * @param evt Pointer to the HTTP client event structure.
+ * @return esp_err_t ESP_OK on success, otherwise an error code.
+ */
 static esp_err_t _http_event_handler(esp_http_client_event_t *evt)
 {
   switch (evt->event_id)
@@ -213,7 +217,6 @@ const char *RegisterModule(const char *token_api)
   return response;
 }
 
-
 /**
  * @brief Registers a peripheral with the given module token and type.
  *
@@ -300,4 +303,3 @@ const int RegisterPeripheral(const char *module_token, const char *p_type)
   free(server_response);
   return peripheral_id; // Return the peripheral ID as an integer
 }
-
