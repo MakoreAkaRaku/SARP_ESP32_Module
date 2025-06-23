@@ -130,7 +130,7 @@ esp_err_t PerformHttpRequest(esp_http_client_method_t method,
  * @brief Returns the module string with the module registration response.
  *
  * @param token_api
- * @return char*
+ * @return const char* The module token string if successful, NULL on failure.
  */
 const char *RegisterModule(const char *token_api)
 {
@@ -300,3 +300,4 @@ const int RegisterPeripheral(const char *module_token, const char *p_type)
   free(server_response);
   return peripheral_id; // Return the peripheral ID as an integer
 }
+
