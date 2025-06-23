@@ -131,7 +131,7 @@ esp_err_t PerformHttpRequest(esp_http_client_method_t method,
 }
 
 /**
- * @brief Returns the module string with the module registration response.
+ * @brief Returns the module string with the module registration response. Must be freed by the caller.
  *
  * @param token_api
  * @return const char* The module token string if successful, NULL on failure.
@@ -222,9 +222,9 @@ const char *RegisterModule(const char *token_api)
  *
  * @param module_token The token of the module to which the peripheral belongs.
  * @param p_type The type of the peripheral.
- * @return int The ID of the registered peripheral, or -1 on failure.
+ * @return uint32_t The ID of the registered peripheral, or -1 on failure.
  */
-const int RegisterPeripheral(const char *module_token, const char *p_type)
+const uint32_t RegisterPeripheral(const char *module_token, const char *p_type)
 {
   // Prepare the URL and request body
   char *url = malloc(strlen(SERVER_URL_API) + strlen(PERIPHERAL_URL) + 1); // Malloc of 128 bytes for URL plus 1 for null terminator
@@ -298,7 +298,7 @@ const int RegisterPeripheral(const char *module_token, const char *p_type)
     ESP_LOGE(TAG, "Response does not contain 'id' or it is not an integer");
     return -1;
   }
-  int peripheral_id = atoi(attr_pointer->valuestring); // Convert the string to an integer
+  uint32_t peripheral_id = atoi(attr_pointer->valuestring); // Convert the string to an integer
   cJSON_Delete(json_response);
   free(server_response);
   return peripheral_id; // Return the peripheral ID as an integer
