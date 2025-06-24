@@ -4,7 +4,7 @@ void ModuleInit();
 
 void InitPollingTask();
 static void UpdateModuleState();
-void InitializePeripherals();
+static void InitializePeripherals();
 float GetHygrometerValue();
 float GetThermometerValue();
 int GetValveState();

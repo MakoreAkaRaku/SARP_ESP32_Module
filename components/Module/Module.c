@@ -7,9 +7,9 @@
 
 #define N_PERIPHERAL_TYPES 3 // 4 (remove "other" peripheral type if not needed)
 #define MINUTES_TO_MICROSECONDS(x) ((x) * 60 * 1000000)
-#define HYGROMETER_ADC_CHANNEL ADC_CHANNEL_7      // GPIO35 = ADC_CHANNEL_7
-#define THERMOMETER_ADC_CHANNEL ADC_CHANNEL_6     // GPIO34 = ADC_CHANNEL_6
-#define VALVE_GPIO_PIN GPIO_NUM_26                // GPIO23 for valve control
+#define HYGROMETER_ADC_CHANNEL ADC_CHANNEL_7  // GPIO35 = ADC_CHANNEL_7
+#define THERMOMETER_ADC_CHANNEL ADC_CHANNEL_6 // GPIO34 = ADC_CHANNEL_6
+#define VALVE_GPIO_PIN GPIO_NUM_26            // GPIO23 for valve control
 
 static adc_oneshot_unit_handle_t adc1_handle;
 struct peripheral
@@ -96,6 +96,7 @@ void ModuleInit()
   ESP_LOGI(TAG, "Module initialized with UUID: %s", module_uuid);
   nvs_commit(https_nvs_handle); // Commit changes to NVS
   nvs_close(https_nvs_handle);
+  InitializePeripherals(); // Initialize peripherals after NVS operations
 }
 
 /**
@@ -128,7 +129,7 @@ static void UpdateModuleState()
   // Implementation for updating module state goes here.
 }
 
-void InitializePeripherals()
+static void InitializePeripherals()
 {
 
   ESP_LOGI(TAG, "Initializing peripherals...");
@@ -146,10 +147,6 @@ void InitializePeripherals()
 
   for (size_t i = 0; i < N_PERIPHERAL_TYPES; i++)
   {
-    // tmp
-    peripherals[i].id = i;
-    peripherals[i].p_type = peripheral_type[i]; // Initialize peripheral type
-    // tmp
     switch (i)
     {
     case 0: // Hygrometer
