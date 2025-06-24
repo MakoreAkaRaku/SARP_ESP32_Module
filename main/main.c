@@ -32,13 +32,11 @@ void InitComponents()
   InitLEDS();
   InitWiFi();
   SwitchWiFi();
-
-  BlockUntilHasConnection();
-
-  ModuleInit();
 }
 
 void app_main(void)
 {
   InitComponents();
+  BlockUntilHasConnection();
+  ModuleInit();
 }
