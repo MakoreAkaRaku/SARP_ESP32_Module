@@ -2,7 +2,7 @@
 
 #define SERVER_URL_API "https://sarp01.westeurope.cloudapp.azure.com/api"
 #define MODULE_URL "/module/"
-#define PERIPHERAL_URL "/periphera/l"
+#define PERIPHERAL_URL "/peripheral/"
 #define PERIPHERAL_STATE_EXT_URL "state/"
 #define PERIPHERAL_DATA_EXT_URL "data"
 
@@ -14,3 +14,5 @@ esp_err_t PerformHttpRequest(esp_http_client_method_t method,
                                size_t buffer_len);
 const char *RegisterModule(const char *token_api);
 const uint32_t RegisterPeripheral(const char* module_token, const char* p_type);
+const char *GetPeripheralState(const uint32_t peripheral_id);
+esp_err_t PostPeripheralData(const uint32_t peripheral_id, const char *data);

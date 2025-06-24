@@ -4,6 +4,8 @@
 #include "cJson.h"
 #define MODULE_REGISTRY_SERVER_RESPONSE_SIZE 128     // Size of the response buffer for module registration
 #define PERIPHERAL_REGISTRY_SERVER_RESPONSE_SIZE 128 // Size of the response buffer for peripheral registration
+#define PERIPHERAL_DATA_SERVER_RESPONSE_SIZE 20      // Size of the response buffer for peripheral data
+#define PERIPHERAL_STATE_SERVER_RESPONSE_SIZE 20     // Size of the response buffer for peripheral state
 static const char TAG[] = "HTTPSClient";
 
 /**
@@ -298,8 +300,128 @@ const uint32_t RegisterPeripheral(const char *module_token, const char *p_type)
     ESP_LOGE(TAG, "Response does not contain 'id' or it is not an integer");
     return -1;
   }
-  uint32_t peripheral_id = atoi(attr_pointer->valuestring); // Convert the string to an integer
+  uint32_t peripheral_id = (uint32_t) attr_pointer->valueint; // Convert the string to an integer
   cJSON_Delete(json_response);
   free(server_response);
   return peripheral_id; // Return the peripheral ID as an integer
+}
+
+const char *GetPeripheralState(uint32_t peripheral_id)
+{
+  char *bufferId = malloc(12 * sizeof(char)); // Allocate memory for the string representation of the ID
+  if (bufferId == NULL)
+  {
+    ESP_LOGE(TAG, "Memory allocation failed for bufferId");
+    return NULL;
+  }
+  const char *id = itoa(peripheral_id, bufferId, 10); // Convert peripheral_id to string in base 10
+  // Prepare the URL for the GET request
+  char *url = malloc(strlen(SERVER_URL_API) + strlen(PERIPHERAL_URL) + strlen(PERIPHERAL_STATE_EXT_URL) + strlen(id) + 1); // Malloc of 128 bytes for URL plus 1 for null terminator
+  if (url == NULL)
+  {
+    ESP_LOGE(TAG, "Memory allocation failed for URL");
+    return NULL;
+  }
+  sprintf(url, "%s%s%s%ld", SERVER_URL_API, PERIPHERAL_URL, PERIPHERAL_STATE_EXT_URL, peripheral_id);
+
+  // Prepare response buffer
+  char *server_response = malloc(PERIPHERAL_STATE_SERVER_RESPONSE_SIZE * sizeof(char)); // Malloc of 128 bytes for response buffer
+  if (server_response == NULL)
+  {
+    ESP_LOGE(TAG, "Memory allocation failed for response buffer");
+    free(url);
+    return NULL;
+  }
+
+  // Perform the HTTP request
+  esp_err_t err = PerformHttpRequest(HTTP_METHOD_GET, url, NULL, server_response, PERIPHERAL_STATE_SERVER_RESPONSE_SIZE);
+
+  // Free allocated resources
+  free(url);
+
+  if (err != ESP_OK)
+  {
+    free(server_response);
+    return NULL;
+  }
+
+  cJSON *json_response = cJSON_Parse(server_response);
+  if (json_response->type != cJSON_Object)
+  {
+    ESP_LOGE(TAG, "Response is not a valid JSON object");
+    cJSON_Delete(json_response);
+    free(server_response);
+    return NULL;
+  }
+
+  cJSON *attr_pointer = cJSON_GetObjectItem(json_response, "state");
+
+  if (attr_pointer == NULL || attr_pointer->type != cJSON_String)
+  {
+    ESP_LOGE(TAG, "Response does not contain 'state' or it is not a string");
+    cJSON_Delete(json_response);
+    free(server_response);
+    return NULL;
+  }
+
+  const char *response = strdup(attr_pointer->valuestring); // Duplicate the string to return
+  if (response == NULL)
+  {
+    ESP_LOGE(TAG, "Memory allocation failed for response string");
+    cJSON_Delete(json_response);
+    free(server_response);
+    return NULL;
+  }
+
+  cJSON_Delete(json_response);
+  free(server_response);
+
+  return response; // Return the state as a string
+}
+esp_err_t PostPeripheralData(const uint32_t peripheralId, const char *data)
+{
+  // Prepare the URL and request body
+  char *url = malloc(strlen(SERVER_URL_API) + strlen(PERIPHERAL_URL) + strlen(PERIPHERAL_DATA_EXT_URL) + 1); // Malloc of 128 bytes for URL plus 1 for null terminator
+  if (url == NULL)
+  {
+    ESP_LOGE(TAG, "Memory allocation failed for URL");
+    return ESP_ERR_NO_MEM;
+  }
+  strcpy(url, SERVER_URL_API);
+  strcat(url, PERIPHERAL_URL);
+  strcat(url, PERIPHERAL_DATA_EXT_URL);
+
+  cJSON *json_module_token = cJSON_CreateObject();
+  if (json_module_token == NULL)
+  {
+    ESP_LOGE(TAG, "Failed to create JSON object");
+    free(url);
+    return -1;
+  }
+  cJSON_AddNumberToObject(json_module_token, "peripheral_id", peripheralId);
+  cJSON_AddStringToObject(json_module_token, "value", data);
+  char *post_data = cJSON_PrintUnformatted(json_module_token);
+  cJSON_Delete(json_module_token);
+  if (post_data == NULL)
+  {
+    ESP_LOGE(TAG, "Failed to create JSON string");
+    free(url);
+    return ESP_ERR_NO_MEM;
+  }
+  // Prepare response buffer
+  char *server_response = malloc(PERIPHERAL_DATA_SERVER_RESPONSE_SIZE * sizeof(char)); // Malloc of 128 bytes for response buffer
+  if (server_response == NULL)
+  {
+    ESP_LOGE(TAG, "Memory allocation failed for response buffer");
+    free(url);
+    free(post_data);
+    return ESP_ERR_NO_MEM;
+  }
+  // Perform the HTTP request
+  esp_err_t err = PerformHttpRequest(HTTP_METHOD_POST, url, post_data, server_response, PERIPHERAL_DATA_SERVER_RESPONSE_SIZE);
+  // Free allocated resources
+  free(url);
+  free(post_data);
+  free(server_response);
+  return err; // Placeholder for actual implementation
 }
