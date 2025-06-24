@@ -4,6 +4,7 @@
 #include "driver/gpio.h"
 #include "esp_adc/adc_oneshot.h"
 #include "esp_timer.h"
+#include "math.h"
 
 #define N_PERIPHERAL_TYPES 3 // 4 (remove "other" peripheral type if not needed)
 #define MINUTES_TO_MICROSECONDS(x) ((x) * 60 * 1000000)
@@ -32,7 +33,7 @@ static char *module_uuid;
 
 static size_t module_uuid_length = 37; // UUID length is 36 characters + 1 for null terminator
 
-nvs_handle_t https_nvs_handle;
+static nvs_handle_t https_nvs_handle;
 static const char *TAG = "Module";
 
 void ModuleInit()
@@ -48,6 +49,7 @@ void ModuleInit()
   ret = nvs_get_str(https_nvs_handle, "module_uuid", module_uuid, &module_uuid_length);
   if (ret == ESP_ERR_NVS_NOT_FOUND)
   {
+    ESP_LOGI(TAG, "Module UUID not found in NVS, registering module...");
     // TODO: fetch token_api from BLE and declare it into the static var from this .c, if not found, show error.
     const char *token_api = "eb9ab986-27ae-4a59-a26f-c536d3ba185f";
     const char *registered_module_uuid = RegisterModule(token_api);
@@ -66,16 +68,16 @@ void ModuleInit()
       return;
     }
   }
-
+  ESP_LOGI(TAG, "Module initialized with UUID: %s", module_uuid);
   for (size_t i = 0; i < N_PERIPHERAL_TYPES; i++)
   {
-    uint32_t peripheral_id;
+    uint32_t peripheral_id = -1;
     const char *p_type = peripheral_type[i];
     ret = nvs_get_u32(https_nvs_handle, p_type, &peripheral_id);
-    if (ret == ESP_ERR_NVS_NOT_FOUND)
+    if (ret == ESP_ERR_NVS_NOT_FOUND || peripheral_id == -1)
     {
-      // Peripheral not found, register it
-      ESP_LOGI(TAG, "Peripheral %s not found, registering...", p_type);
+      // If the peripheral ID is not found or is -1, we need to register it
+      ESP_LOGI(TAG, "Peripheral %s not found in NVS, registering...", p_type);
       peripheral_id = RegisterPeripheral(module_uuid, p_type);
       if (peripheral_id < 0)
       {
@@ -93,10 +95,10 @@ void ModuleInit()
     peripherals[i].id = peripheral_id;
     peripherals[i].p_type = p_type;
   }
-  ESP_LOGI(TAG, "Module initialized with UUID: %s", module_uuid);
-  nvs_commit(https_nvs_handle); // Commit changes to NVS
+  ESP_ERROR_CHECK(nvs_commit(https_nvs_handle)); // Commit changes to NVS
   nvs_close(https_nvs_handle);
-  InitializePeripherals(); // Initialize peripherals after NVS operations
+  InitializePeripheralsPinSets(); // Initialize peripherals pinset
+  InitPollingTask();              // Set up the polling task
 }
 
 /**
@@ -105,7 +107,7 @@ void ModuleInit()
  *  It will set up a task that periodically checks the module state and sends updates to the server.
  *
  */
-void InitPollingTask()
+static void InitPollingTask()
 {
   ESP_LOGI(TAG, "Setting up polling task...");
   const esp_timer_create_args_t periodicTimerArgs = {
@@ -113,7 +115,7 @@ void InitPollingTask()
       .name = "PeriodicUpdateTimer"};
   esp_timer_handle_t timerHandler;
   ESP_ERROR_CHECK(esp_timer_create(&periodicTimerArgs, &timerHandler));
-  ESP_ERROR_CHECK(esp_timer_start_periodic(timerHandler, MINUTES_TO_MICROSECONDS(0.05))); // Update every minute
+  ESP_ERROR_CHECK(esp_timer_start_periodic(timerHandler, MINUTES_TO_MICROSECONDS(1))); // Update every minute
   ESP_LOGI(TAG, "Started timers, time since boot: %lld us", esp_timer_get_time());
 }
 /**
@@ -125,11 +127,71 @@ void InitPollingTask()
 static void UpdateModuleState()
 {
   ESP_LOGI(TAG, "Updating module state...");
+  for (size_t i = 0; i < N_PERIPHERAL_TYPES; i++)
+  {
+    double data = 0.0;
+    switch (i)
+    {
+    case 0: // Hygrometer
+      double humidity = GetHygrometerValue();
+      if (humidity < 0.0f)
+      {
+        ESP_LOGE(TAG, "Failed to read hygrometer value.");
+        continue; // Skip this peripheral if reading failed
+      }
+      data = round(humidity * 100.0) / 100.0; // Round to 2 decimal places
+      ESP_LOGI(TAG, "Hygrometer Humidity: %f", data);
+      break;
+    case 1: // Thermometer
 
-  // Implementation for updating module state goes here.
+      double temperature = GetThermometerValue();
+      if (temperature < 0.0f)
+      {
+        ESP_LOGE(TAG, "Failed to read thermometer value.");
+        continue; // Skip this peripheral if reading failed
+      }
+      data = round(temperature * 100.0) / 100.0; // Round to 2 decimal places
+      ESP_LOGI(TAG, "Thermometer Temperature: %f", data);
+      break;
+    case 2: // Valve
+
+      const char *state = GetPeripheralState(peripherals[i].id); // Get the current state of the valve
+      if (state == NULL)
+      {
+        ESP_LOGE(TAG, "Failed to get valve state.");
+        continue; // Skip this peripheral if reading failed
+      }
+      if (strcmp(state, "off") == 0)
+      {
+        SetValveState(0);
+      }
+      else if (strcmp(state, "on") == 0)
+      {
+        SetValveState(1);
+      }
+      else
+      {
+        ESP_LOGE(TAG, "Invalid valve state received: %s", state);
+        free((void *)state); // Free the state string if it was dynamically allocated
+        continue;            // Skip this peripheral if the state is invalid
+      }
+      int valve_state = GetValveState();
+      free((void *)state);        // Free the state string after use
+      data = (double)valve_state; // Convert valve state to double for consistency
+      break;
+    // Case 3: Other
+    // This case is not implemented, but you can add your logic here if needed.
+    default:
+      continue; // Skip if the peripheral type is not recognized
+      break;
+    }
+    ESP_ERROR_CHECK(PostPeripheralData(peripherals[i].id, data));
+  }
+
+  ESP_LOGI(TAG, "Module state updated successfully.");
 }
 
-static void InitializePeripherals()
+static void InitializePeripheralsPinSets()
 {
 
   ESP_LOGI(TAG, "Initializing peripherals...");
@@ -162,16 +224,16 @@ static void InitializePeripherals()
       // NOT IMPLEMENTED
       ESP_LOGW(TAG, "Peripheral type 'other' is not implemented yet.");
     }
-    ESP_LOGI(TAG, "Peripheral %s initialized with ID: %ld", peripherals[i].p_type, peripherals[i].id);
   }
+  ESP_LOGI(TAG, "Peripherals initialized successfully.");
 }
 
 /**
  * @brief Reads the hygrometer value from the ADC and converts it to a humidity percentage.
  *
- * @return float The humidity percentage, or -1.0f on error.
+ * @return double The humidity percentage, or -1.0f on error.
  */
-float GetHygrometerValue()
+double GetHygrometerValue()
 {
   int raw_adc_reading = -1;
   ESP_ERROR_CHECK(adc_oneshot_read(adc1_handle, HYGROMETER_ADC_CHANNEL, &raw_adc_reading));
@@ -180,7 +242,7 @@ float GetHygrometerValue()
     ESP_LOGE(TAG, "Failed to read ADC value for hygrometer");
     return -1.0f; // Return an error value
   }
-  float humidity = (1.0f - (raw_adc_reading / 4095.0f)); // Convert ADC reading to voltage
+  double humidity = (1.0 - (raw_adc_reading / 4095.0)); // Convert ADC reading to voltage
   ESP_LOGI(TAG, "Hygrometer Humidity: %.2f", humidity);
   return humidity;
 }
@@ -188,9 +250,9 @@ float GetHygrometerValue()
 /**
  * @brief Reads the thermometer value from the ADC and converts it to a temperature in Celsius.
  *
- * @return float The temperature in Celsius, or -1.0f on error.
+ * @return double The temperature in Celsius, or -1.0 on error.
  */
-float GetThermometerValue()
+double GetThermometerValue()
 {
   int raw_adc_reading = -1;
   ESP_ERROR_CHECK(adc_oneshot_read(adc1_handle, THERMOMETER_ADC_CHANNEL, &raw_adc_reading));
@@ -201,14 +263,14 @@ float GetThermometerValue()
   }
 
   // Convert ADC value to voltage (assuming 3.3V reference and 12-bit ADC)
-  float voltage = (raw_adc_reading / 4095.0f) * 3.3f;
+  double voltage = (raw_adc_reading / 4095.0f) * 3.3f;
 
   // For a BC547 used as a temperature sensor, you typically use Vbe drop:
   // Vbe decreases by about -2mV/°C, assuming that Vbe at 25°C is about 0.660V.
   // T(°C) = 25 - ((Vbe - 0.660) / 0.002)
 
-  float vbe = voltage; // If direct, else adjust for divider
-  float temperature_c = 25.0f - ((vbe - 0.660f) / 0.002f);
+  double vbe = voltage; // If direct, else adjust for divider
+  double temperature_c = 25.0 - ((vbe - 0.660) / 0.002);
 
   ESP_LOGI(TAG, "Temperature: %.2f °C", temperature_c);
   return temperature_c;

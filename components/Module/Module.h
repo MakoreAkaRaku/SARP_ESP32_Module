@@ -2,10 +2,10 @@
 
 void ModuleInit();
 
-void InitPollingTask();
+static void InitPollingTask();
 static void UpdateModuleState();
-static void InitializePeripherals();
-float GetHygrometerValue();
-float GetThermometerValue();
+static void InitializePeripheralsPinSets();
+double GetHygrometerValue();
+double GetThermometerValue();
 int GetValveState();
 esp_err_t SetValveState(int state);

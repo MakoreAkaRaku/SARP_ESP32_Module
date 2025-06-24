@@ -15,4 +15,4 @@ esp_err_t PerformHttpRequest(esp_http_client_method_t method,
 const char *RegisterModule(const char *token_api);
 const uint32_t RegisterPeripheral(const char* module_token, const char* p_type);
 const char *GetPeripheralState(const uint32_t peripheral_id);
-esp_err_t PostPeripheralData(const uint32_t peripheral_id, const char *data);
+esp_err_t PostPeripheralData(const uint32_t peripheral_id, const double data);

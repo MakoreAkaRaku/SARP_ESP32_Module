@@ -4,8 +4,8 @@
 #include "cJson.h"
 #define MODULE_REGISTRY_SERVER_RESPONSE_SIZE 128     // Size of the response buffer for module registration
 #define PERIPHERAL_REGISTRY_SERVER_RESPONSE_SIZE 128 // Size of the response buffer for peripheral registration
-#define PERIPHERAL_DATA_SERVER_RESPONSE_SIZE 20      // Size of the response buffer for peripheral data
-#define PERIPHERAL_STATE_SERVER_RESPONSE_SIZE 20     // Size of the response buffer for peripheral state
+#define PERIPHERAL_DATA_SERVER_RESPONSE_SIZE 64      // Size of the response buffer for peripheral data
+#define PERIPHERAL_STATE_SERVER_RESPONSE_SIZE 64     // Size of the response buffer for peripheral state
 static const char TAG[] = "HTTPSClient";
 
 /**
@@ -378,7 +378,7 @@ const char *GetPeripheralState(uint32_t peripheral_id)
 
   return response; // Return the state as a string
 }
-esp_err_t PostPeripheralData(const uint32_t peripheralId, const char *data)
+esp_err_t PostPeripheralData(const uint32_t peripheralId, const double data)
 {
   // Prepare the URL and request body
   char *url = malloc(strlen(SERVER_URL_API) + strlen(PERIPHERAL_URL) + strlen(PERIPHERAL_DATA_EXT_URL) + 1); // Malloc of 128 bytes for URL plus 1 for null terminator
@@ -399,8 +399,9 @@ esp_err_t PostPeripheralData(const uint32_t peripheralId, const char *data)
     return -1;
   }
   cJSON_AddNumberToObject(json_module_token, "peripheral_id", peripheralId);
-  cJSON_AddStringToObject(json_module_token, "value", data);
+  cJSON_AddNumberToObject(json_module_token, "value", data);
   char *post_data = cJSON_PrintUnformatted(json_module_token);
+  ESP_LOGI(TAG, "Post data: %s", post_data);
   cJSON_Delete(json_module_token);
   if (post_data == NULL)
   {

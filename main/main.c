@@ -34,13 +34,11 @@ void InitComponents()
   SwitchWiFi();
 
   BlockUntilHasConnection();
-  
+
   ModuleInit();
 }
 
 void app_main(void)
 {
   InitComponents();
-
-
 }
