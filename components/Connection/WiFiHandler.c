@@ -61,8 +61,8 @@ void SetCredentials(const uint8_t *ssid, const uint8_t *pwd)
                 .capable = true,
                 .required = false}},
     };
-    strncpy((char *)conf.sta.ssid, (const char *)ssid, SSID_SIZE);
-    strncpy((char *)conf.sta.password, (const char *)pwd, PWD_SIZE);
+    strncpy((char *)conf.sta.ssid, (const char *)ssid, MAX_SSID_SIZE);
+    strncpy((char *)conf.sta.password, (const char *)pwd, MAX_PWD_SIZE);
     esp_wifi_set_config(WIFI_IF_STA, &conf);
 }
 

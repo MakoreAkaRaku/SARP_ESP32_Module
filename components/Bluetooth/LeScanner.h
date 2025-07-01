@@ -7,14 +7,16 @@ void EnableBLE();
 
 void DisableBLE();
 void StartScan();
+
 /**
- * @brief Checks whether a scan result matches with the UUID service assigned to listen to.
- *
- * @param scanResult
- * @return true
- * @return false
+ * @brief Checks whether a scan result matches with a given short UUID.
+ * This function checks if the short UUID corresponds to the one
+ * advertised in the scan result.
+ * @param scanResult The scan result to check.
+ * @param short_uuid The short UUID to compare against.
+ * @return true if the UUID matches, false otherwise.
  */
-static bool UUIDCorresponds(const struct ble_scan_result_evt_param *scanResult);
+static bool UUIDCorresponds(const struct ble_scan_result_evt_param *scanResult,const uint16_t short_uuid);
 
 void StopScan();
 
@@ -36,3 +38,11 @@ static void SwitchToWiFiCallback();
  * @param pwd
  */
 static void FetchCredentials(const struct ble_scan_result_evt_param *scanResult, uint8_t *ssid, uint8_t *pwd);
+
+/**
+ * @brief Fetches Token API from a scanResult adv that matches with the UUID service established.
+ *
+ * @param scanResult
+ * @param token
+ */
+static void FetchTokenAPI(const struct ble_scan_result_evt_param *scanResult, uint8_t *token);

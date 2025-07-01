@@ -28,10 +28,10 @@ const char *peripheral_type[] = {
 
 static struct peripheral peripherals[N_PERIPHERAL_TYPES];
 
-// static char *token_api;
+static char *token_api;
 static char *module_uuid;
 
-static size_t module_uuid_length = 37; // UUID length is 36 characters + 1 for null terminator
+static const size_t uuid_length = 37; // UUID length is 36 characters + 1 for null terminator
 
 static nvs_handle_t https_nvs_handle;
 static const char *TAG = "Module";
@@ -45,10 +45,21 @@ void ModuleInit()
     ESP_LOGE(TAG, "Failed to open NVS namespace: %s", esp_err_to_name(ret));
     return;
   }
-  module_uuid = malloc(module_uuid_length * sizeof(char)); // UUID length is 36 characters + null terminator
-  ret = nvs_get_str(https_nvs_handle, "module_uuid", module_uuid, &module_uuid_length);
+  module_uuid = malloc(uuid_length * sizeof(char)); // UUID length is 36 characters + null terminator
+  ret = nvs_get_str(https_nvs_handle, "module_uuid", module_uuid, &uuid_length);
   if (ret == ESP_ERR_NVS_NOT_FOUND)
   {
+    token_api = malloc(uuid_length * sizeof(char)); // Allocate memoery for token_api.
+    ret = nvs_get_str(https_nvs_handle, "token_api", token_api, &uuid_length);
+    if (ret == ESP_ERR_NVS_NOT_FOUND)
+    {
+      ESP_LOGE(TAG, "Token API not found in NVS, please register it first.");
+      free(module_uuid);
+      free(token_api);
+      nvs_close(https_nvs_handle);
+      esp_restart(); // Restart the ESP32 if token_api is not found
+      return;
+    }
     ESP_LOGI(TAG, "Module UUID not found in NVS, registering module...");
     // TODO: fetch token_api from BLE and declare it into the static var from this .c, if not found, show error.
     const char *token_api = "eb9ab986-27ae-4a59-a26f-c536d3ba185f";
@@ -59,7 +70,7 @@ void ModuleInit()
       ESP_LOGE(TAG, "Failed to register module");
       return;
     }
-    strncpy(module_uuid, registered_module_uuid, module_uuid_length);
+    strncpy(module_uuid, registered_module_uuid, uuid_length);
     free((void *)registered_module_uuid); // Free the memory allocated by RegisterModule
     ret = nvs_set_str(https_nvs_handle, "module_uuid", module_uuid);
     if (ret != ESP_OK)
@@ -293,4 +304,25 @@ esp_err_t SetValveState(int state)
   ESP_ERROR_CHECK(gpio_set_level(VALVE_GPIO_PIN, state));
   ESP_LOGI(TAG, "Valve state set to: %d", state);
   return ESP_OK;
+}
+
+void RegisterTokenAPI(const char *token_api)
+{
+  ESP_LOGI(TAG, "Registering token API: %s", token_api);
+  esp_err_t ret = nvs_open(TAG, NVS_READWRITE, &https_nvs_handle);
+  if (ret != ESP_OK)
+  {
+    ESP_LOGE(TAG, "Failed to open NVS namespace: %s", esp_err_to_name(ret));
+    return;
+  }
+  ret = nvs_set_str(https_nvs_handle, "token_api", token_api);
+  if (ret != ESP_OK)
+  {
+    ESP_LOGE(TAG, "Failed to save token API to NVS: %s", esp_err_to_name(ret));
+    nvs_close(https_nvs_handle);
+    return;
+  }
+  nvs_commit(https_nvs_handle); // Commit changes to NVS
+  ESP_LOGI(TAG, "Token API registered successfully.");
+  nvs_close(https_nvs_handle);
 }

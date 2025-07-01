@@ -11,8 +11,8 @@
 #include "esp_log.h"
 #include "nvs_flash.h"
 
-#define SSID_SIZE 8 // in Bytes
-#define PWD_SIZE 8  // in Bytes
+#define MAX_SSID_SIZE 16 // in Bytes
+#define MAX_PWD_SIZE 16  // in Bytes
 bool HasCredentialsSaved();
 
 bool BlockUntilHasConnection();
@@ -22,7 +22,7 @@ bool BlockUntilHasConnection();
  * setting up the necessary network interfaces, event handlers, and default configurations.
  * It also checks for existing Wi-Fi credentials, logging them if found, or setting default
  * placeholder values if none are available.
- * 
+ *
  */
 void InitWiFi();
 
