@@ -1,4 +1,4 @@
 idf_component_register(SRCS "WiFiHandler.c"
                     INCLUDE_DIRS "."
-                    REQUIRES Led Bluetooth esp_wifi nvs_flash
+                    REQUIRES Led Bluetooth Module esp_wifi nvs_flash
                     )

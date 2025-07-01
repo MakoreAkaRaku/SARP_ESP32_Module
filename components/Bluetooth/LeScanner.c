@@ -2,13 +2,14 @@
 #include "WiFiHandler.h"
 #include "Module.h"
 #include "LedHandler.h"
-#define MAX_RETRY 3
+#define MAX_RETRY 5
 #define SCAN_DURATION 10               // Scan duration in seconds.
 #define SHORT_WIFI_UUID_TARGET 0xDEAD  // Service target for WiFi credentials
 #define SHORT_TOKEN_UUID_TARGET 0xFADE // Service target for token API
-#define DATA_START_OFFSET 4            // 4 offset bytes without counting th
+#define DATA_START_OFFSET 4            // 4 offset bytes without counting the length byte
 static const char TAG[] = "LeScanner";
 static int scan_retry = 0;
+
 void EnableBLE()
 {
   // ESP_ERROR_CHECK(esp_bt_controller_mem_release(ESP_BT_MODE_BTDM));
@@ -59,7 +60,7 @@ void DisableBLE()
 
 void StartScan()
 {
-  ESP_LOGI(TAG, "Start Scan for 10");
+  ESP_LOGI(TAG, "Start Scan for 10s");
   esp_ble_gap_start_scanning(SCAN_DURATION);
 }
 
@@ -122,7 +123,6 @@ static void ScanResultCallback(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_para
         free(pwd);
         LEDEvent(BLE_CONFIG_SETTED);
       }
-      // esp_restart();
     }
     else if (UUIDCorresponds(scanResult, SHORT_TOKEN_UUID_TARGET) && scanResult->adv_data_len > 0 && scanResult->scan_rsp_len > 0)
     {
@@ -143,7 +143,6 @@ static void ScanResultCallback(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_para
         free(token);
         LEDEvent(BLE_CONFIG_SETTED);
       }
-      // esp_restart();
     }
     else if (scanResult->search_evt == ESP_GAP_SEARCH_INQ_CMPL_EVT)
     {

@@ -31,10 +31,31 @@ static struct peripheral peripherals[N_PERIPHERAL_TYPES];
 static char *token_api;
 static char *module_uuid;
 
-static const size_t uuid_length = 37; // UUID length is 36 characters + 1 for null terminator
+static const size_t UUID_SIZE = 37; // UUID length is 36 characters + 1 for null terminator
 
 static nvs_handle_t https_nvs_handle;
 static const char *TAG = "Module";
+
+bool ModuleIsConfigured()
+{
+  esp_err_t ret = nvs_open(TAG, NVS_READONLY, &https_nvs_handle);
+  if (ret != ESP_OK)
+  {
+    ESP_LOGE(TAG, "Failed to open NVS namespace: %s", esp_err_to_name(ret));
+    return false;
+  }
+  size_t required_size = UUID_SIZE;
+  char *uuid_buffer = malloc(UUID_SIZE * sizeof(char)); // Allocate memory for UUID buffer
+  ret = nvs_get_str(https_nvs_handle, "token_api", uuid_buffer, &required_size);
+  nvs_close(https_nvs_handle);
+  if (ret == ESP_OK)
+  {
+    free(uuid_buffer);
+    return true; // Module is configured
+  }
+  free(uuid_buffer);
+  return false; // Module is not configured
+}
 
 void ModuleInit()
 {
@@ -45,12 +66,13 @@ void ModuleInit()
     ESP_LOGE(TAG, "Failed to open NVS namespace: %s", esp_err_to_name(ret));
     return;
   }
-  module_uuid = malloc(uuid_length * sizeof(char)); // UUID length is 36 characters + null terminator
-  ret = nvs_get_str(https_nvs_handle, "module_uuid", module_uuid, &uuid_length);
+  size_t uuid_len = UUID_SIZE;
+  module_uuid = malloc(UUID_SIZE * sizeof(char)); // UUID length is 36 characters + null terminator
+  ret = nvs_get_str(https_nvs_handle, "module_uuid", module_uuid, &uuid_len);
   if (ret == ESP_ERR_NVS_NOT_FOUND)
   {
-    token_api = malloc(uuid_length * sizeof(char)); // Allocate memoery for token_api.
-    ret = nvs_get_str(https_nvs_handle, "token_api", token_api, &uuid_length);
+    token_api = malloc(UUID_SIZE * sizeof(char)); // Allocate memory for token_api.
+    ret = nvs_get_str(https_nvs_handle, "token_api", token_api, &uuid_len);
     if (ret == ESP_ERR_NVS_NOT_FOUND)
     {
       ESP_LOGE(TAG, "Token API not found in NVS, please register it first.");
@@ -61,16 +83,14 @@ void ModuleInit()
       return;
     }
     ESP_LOGI(TAG, "Module UUID not found in NVS, registering module...");
-    // TODO: fetch token_api from BLE and declare it into the static var from this .c, if not found, show error.
-    const char *token_api = "eb9ab986-27ae-4a59-a26f-c536d3ba185f";
     const char *registered_module_uuid = RegisterModule(token_api);
-    ESP_LOGI(TAG, " module uuid content size: %d", strlen(registered_module_uuid));
+    ESP_LOGI(TAG, "Module uuid content size: %d", strlen(registered_module_uuid));
     if (registered_module_uuid == NULL)
     {
       ESP_LOGE(TAG, "Failed to register module");
       return;
     }
-    strncpy(module_uuid, registered_module_uuid, uuid_length);
+    strncpy(module_uuid, registered_module_uuid, UUID_SIZE);
     free((void *)registered_module_uuid); // Free the memory allocated by RegisterModule
     ret = nvs_set_str(https_nvs_handle, "module_uuid", module_uuid);
     if (ret != ESP_OK)
