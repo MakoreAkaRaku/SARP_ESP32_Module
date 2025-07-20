@@ -1,8 +1,9 @@
 #include "LedHandler.h"
 
+#define LED_GPIO GPIO_NUM_2
 void InitLEDS()
 {
-    gpio_set_direction(GPIO_NUM_2, GPIO_MODE_OUTPUT);
+    gpio_set_direction(LED_GPIO, GPIO_MODE_OUTPUT);
 }
 
 void LEDEvent(enum LED_MODE state)
