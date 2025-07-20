@@ -21,7 +21,7 @@ void LEDEvent(enum LED_MODE state)
         break;
     case WIFI_CONNECTED:
         times = 1;
-        blinks = 5;
+        blinks = 4;
         blinkInterval1 = blinkInterval2 = pdMS_TO_TICKS(250);
         break;
     case WIFI_CONNECTING:
