@@ -8,7 +8,7 @@ This project uses the ESP-IDF framework to program the ESP32 microcontroller.
 
 - ESP32 development board
 - USB cable
-- [ESP-IDF](https://docs.espressif.com/projects/esp-idf/en/latest/esp-idf/get-started/index.html) installed on your system
+- [ESP-IDF](https://docs.espressif.com/projects/esp-idf/en/latest/esp-idf/get-started/index.html) installed on your system. currently using v.5.2.2 build.
 
 ### Building the Project
 
